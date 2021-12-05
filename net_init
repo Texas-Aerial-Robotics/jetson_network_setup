@@ -1,0 +1,102 @@
+#!/bin/bash
+
+################# to run file run @source ./net_init 
+################# you can add flags -ardsTR
+################# -a makes the output of all commands visible
+################# -r makes the roscore comand output visible
+################# -d makes the master discovery output visible
+################# -s makes the master sync output visible
+################# USE EITHER R OR T, not both
+################# -R test the recieve
+################# -T test the transmit
+################# use it in pairs, one computer uses R the other uses T, if want to check multiple computers use multiple R
+
+#Gets the IP of the system
+IP=`hostname -I | tr -d ' '`
+
+export ROS_IP=$IP
+export ROS_MASTER_URI=http://localhost:11311
+sudo sh -c "echo 1 >/proc/sys/net/ipv4/ip_forward"
+sudo sh -c "echo 0 >/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
+
+
+#Procesing flags
+ROS=">/dev/null 2>&1 &"
+DIS=">/dev/null 2>&1 &"
+SYN=">/dev/null 2>&1 &"
+TES=''
+OPTIND=1
+while getopts "ardsRT" option; do
+
+
+	if [[ "$option" == "a" ]] 
+	then
+		ROS='&'
+		DIS='&'
+		SYN='&'
+	else
+
+		if [[ "$option" == "r" ]]
+		then
+			ROS='&'	
+		fi
+
+		if [[ "$option" == "d" ]]
+		then
+			DIS='&'
+		fi
+
+		if [[ "$option" == "s" ]]
+		then
+			SYN='&'
+		fi
+		
+		
+			
+	fi
+
+	if [[ "$option" == "T" ]]
+	then
+		TES="rostopic pub /test/topic std_msgs/String 'Hello World' -r 1"	
+	fi
+	if [[ "$option" == "R" ]]
+	then
+		TES="rostopic echo /test/topic"	
+	fi
+
+done
+
+
+#Runs commands
+#sleeps are to wait for each command to intialize might need to change in case its not enough time
+echo "ROSCORE"
+eval "roscore --port 11311 "$ROS""
+echo "ROSCORE GOOD"
+sleep 5
+echo "MASTER DISCOVERY"
+eval "rosrun fkie_master_discovery master_discovery "$DIS""
+echo "MASTER DISCOVERY GOOD"
+sleep 5
+echo "MASTER SYNC"
+eval "rosrun fkie_master_sync master_sync "$SYN""
+echo "MASTER SYNC GOOD"
+sleep 5
+
+eval "$TES"
+
+#To end the programs do
+# 1 'fg'
+# 2 Ctrl + c
+# wait for program to end
+# check programs with ps
+# repeat for all programs
+
+# what processes you should see when running the code
+
+# roscore
+# master_discover
+# master_sync
+
+# if R or T runed
+# then you could see
+# a publisher or a subsciber
